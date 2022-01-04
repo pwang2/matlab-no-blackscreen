@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: andy-matlab
+spec:
+  serviceName: andy-matlab
+  replicas: 1
+  selector:
+    matchLabels:
+      app: andy-matlab
+  template:
+    metadata:
+      labels:
+        app: andy-matlab
+    spec:
+      containers:
+      - args:
+        - -vnc
+        command:
+        - /bin/run.sh
+        env:
+        - name: PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: andy-matlab-password
+              key: PASSWORD
+        image: pwang2/matlab-without-blackscreen:1.0.13
+        imagePullPolicy: IfNotPresent
+        name: andy-matlab
+        ports:
+        - containerPort: 5901
+          hostPort: 5901
+          protocol: TCP
+        - containerPort: 6080
+          hostPort: 6080
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 800m
+            memory: 5Gi
+        volumeMounts:
+          - mountPath: /home/matlab/Projects
+            name: andy-matlab-pvc
+   
+  volumeClaimTemplates:
+  - metadata:
+      name: andy-matlab-pvc
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 32Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matlab-service
+  namespace: default
+spec:
+  ports:
+  - port: 32123
+    protocol: TCP
+    targetPort: 6080
+  selector:
+    app: andy-matlab
+  type: LoadBalancer
